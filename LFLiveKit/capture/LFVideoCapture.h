@@ -31,6 +31,7 @@
 
 /** The preView will show OpenGL ES view*/
 @property (null_resettable, nonatomic, strong) UIView *preView;
+@property (null_resettable, nonatomic, strong) UIView *secondPreView;
 
 /** The captureDevicePosition control camraPosition ,default front*/
 @property (nonatomic, assign) AVCaptureDevicePosition captureDevicePosition;

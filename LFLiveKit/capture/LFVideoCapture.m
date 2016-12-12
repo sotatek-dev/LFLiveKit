@@ -34,6 +34,11 @@
 
 @property (nonatomic, strong) GPUImageMovieWriter *movieWriter;
 
+
+@property (nonatomic, strong) GPUImageOutput<GPUImageInput> *secondFilter;
+@property (nonatomic, strong) GPUImageOutput<GPUImageInput> *secondOutput;
+@property (nonatomic, strong) GPUImageView *secondGpuImageView;
+
 @end
 
 @implementation LFVideoCapture
@@ -67,6 +72,10 @@
     if(_gpuImageView){
         [_gpuImageView removeFromSuperview];
         _gpuImageView = nil;
+    }
+    if(_secondGpuImageView){
+        [_secondGpuImageView removeFromSuperview];
+        _secondGpuImageView = nil;
     }
 }
 
@@ -105,8 +114,18 @@
     self.gpuImageView.frame = CGRectMake(0, 0, preView.frame.size.width, preView.frame.size.height);
 }
 
+- (void)setSecondPreView:(UIView *)preView {
+    if (self.secondGpuImageView.superview) [self.secondGpuImageView removeFromSuperview];
+    [preView insertSubview:self.secondGpuImageView atIndex:0];
+    self.secondGpuImageView.frame = CGRectMake(0, 0, preView.frame.size.width, preView.frame.size.height);
+}
+
 - (UIView *)preView {
     return self.gpuImageView.superview;
+}
+
+- (UIView *)secondPreView {
+    return self.secondGpuImageView.superview;
 }
 
 - (void)setCaptureDevicePosition:(AVCaptureDevicePosition)captureDevicePosition {
@@ -249,6 +268,15 @@
     return _gpuImageView;
 }
 
+- (GPUImageView *)secondGpuImageView{
+    if(!_secondGpuImageView){
+        _secondGpuImageView = [[GPUImageView alloc] initWithFrame:[UIScreen mainScreen].bounds];
+        [_secondGpuImageView setFillMode:kGPUImageFillModePreserveAspectRatioAndFill];
+        [_secondGpuImageView setAutoresizingMask:UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight];
+    }
+    return _secondGpuImageView;
+}
+
 -(UIImage *)currentImage{
     if(_filter){
         [_filter useNextFrameForImageCapture];
@@ -286,17 +314,17 @@
     [self.videoCamera removeAllTargets];
     [self.output removeAllTargets];
     [self.cropfilter removeAllTargets];
+
+    [self.secondFilter removeAllTargets];
+    [self.output removeAllTargets];
     
-    if (self.beautyFace) {
-        self.output = [[LFGPUImageEmptyFilter alloc] init];
-        self.filter = [[LFGPUImageBeautyFilter alloc] init];
-        self.beautyFilter = (LFGPUImageBeautyFilter*)self.filter;
-    } else {
-        self.output = [[LFGPUImageEmptyFilter alloc] init];
-        self.filter = [[LFGPUImageEmptyFilter alloc] init];
-        self.beautyFilter = nil;
-    }
-    
+
+    self.output = [[LFGPUImageEmptyFilter alloc] init];
+    self.filter = [[LFGPUImageBeautyFilter alloc] init];
+    self.secondOutput = [[LFGPUImageEmptyFilter alloc] init];
+    self.secondFilter = [[LFGPUImageEmptyFilter alloc] init];
+    self.beautyFilter = (LFGPUImageBeautyFilter*)self.filter;
+
     ///< 调节镜像
     [self reloadMirror];
     
@@ -306,8 +334,10 @@
         self.cropfilter = [[GPUImageCropFilter alloc] initWithCropRegion:cropRect];
         [self.videoCamera addTarget:self.cropfilter];
         [self.cropfilter addTarget:self.filter];
+        [self.cropfilter addTarget:self.secondFilter];
     }else{
         [self.videoCamera addTarget:self.filter];
+        [self.videoCamera addTarget:self.secondFilter];
     }
     
     //< 添加水印
@@ -321,20 +351,30 @@
     }else{
         [self.filter addTarget:self.output];
         [self.output addTarget:self.gpuImageView];
+        [self.secondFilter addTarget:self.secondOutput];
+        [self.secondOutput addTarget:self.secondGpuImageView];
         if(self.saveLocalVideo) [self.output addTarget:self.movieWriter];
     }
     
     [self.filter forceProcessingAtSize:self.configuration.videoSize];
     [self.output forceProcessingAtSize:self.configuration.videoSize];
+    [self.secondFilter forceProcessingAtSize:self.configuration.videoSize];
+    [self.secondOutput forceProcessingAtSize:self.configuration.videoSize];
     [self.blendFilter forceProcessingAtSize:self.configuration.videoSize];
     [self.uiElementInput forceProcessingAtSize:self.configuration.videoSize];
     
     
     //< 输出数据
     __weak typeof(self) _self = self;
-    [self.output setFrameProcessingCompletionBlock:^(GPUImageOutput *output, CMTime time) {
-        [_self processVideo:output];
-    }];
+    if (self.beautyFace) {
+        [self.output setFrameProcessingCompletionBlock:^(GPUImageOutput *output, CMTime time) {
+            [_self processVideo:output];
+        }];
+    } else {
+        [self.secondOutput setFrameProcessingCompletionBlock:^(GPUImageOutput *output, CMTime time) {
+            [_self processVideo:output];
+        }];
+    }
     
 }
 

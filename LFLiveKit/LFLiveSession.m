@@ -235,6 +235,16 @@
     return self.videoCaptureSource.preView;
 }
 
+- (void)setSecondPreView:(UIView *)preView {
+    [self willChangeValueForKey:@"secondPreView"];
+    [self.videoCaptureSource setSecondPreView:preView];
+    [self didChangeValueForKey:@"secondPreView"];
+}
+
+- (UIView *)secondPreView {
+    return self.videoCaptureSource.secondPreView;
+}
+
 - (void)setCaptureDevicePosition:(AVCaptureDevicePosition)captureDevicePosition {
     [self willChangeValueForKey:@"captureDevicePosition"];
     [self.videoCaptureSource setCaptureDevicePosition:captureDevicePosition];
