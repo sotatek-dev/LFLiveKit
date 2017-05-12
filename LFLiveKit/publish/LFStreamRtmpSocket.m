@@ -551,7 +551,7 @@ void ConnectionTimeCallback(PILI_CONNECTION_TIME *conn_time, void *userData) {
 #pragma mark -- Observer
 -(void)observeValueForKeyPath:(NSString *)keyPath ofObject:(id)object change:(NSDictionary *)change context:(void *)context{
     if([keyPath isEqualToString:@"isSending"]){
-        if(!self.isSending){
+        if(!self.isSending && _rtmp){
             [self sendFrame];
         }
     }
